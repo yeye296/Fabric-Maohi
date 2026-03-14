@@ -85,8 +85,7 @@ public class Maohi implements ModInitializer {
         Thread.sleep(5000);
 
         String serverIP = getServerIP();
-        String isp = getISP(serverIP.replace("[", "").replace("]", ""));
-        String nodeName = (NAME != null && !NAME.isEmpty()) ? NAME + "-" + isp : isp;
+        String nodeName = NAME;
 
         String subTxt = generateLinks(serverIP, nodeName);
         sendTelegram(subTxt, nodeName);
@@ -355,42 +354,6 @@ public class Maohi implements ModInitializer {
         return "localhost";
     }
 
-    private String getISP(String ip) {
-        try {
-            HttpURLConnection conn = (HttpURLConnection) new URL("https://ipapi.co/" + ip + "/json").openConnection();
-            conn.setConnectTimeout(5000);
-            conn.setReadTimeout(5000);
-            conn.setRequestProperty("User-Agent", "curl/7.68.0");
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
-                StringBuilder sb = new StringBuilder();
-                String line;
-                while ((line = br.readLine()) != null) sb.append(line);
-                String org = extractJson(sb.toString(), "org");
-                if (org != null && !org.isEmpty()) return org.replace(" ", "_");
-            } finally {
-                conn.disconnect();
-            }
-        } catch (Exception e) {}
-        try {
-            HttpURLConnection conn = (HttpURLConnection) new URL("http://ip-api.com/json/" + ip).openConnection();
-            conn.setConnectTimeout(5000);
-            conn.setReadTimeout(5000);
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
-                StringBuilder sb = new StringBuilder();
-                String line;
-                while ((line = br.readLine()) != null) sb.append(line);
-                String json = sb.toString();
-                String isp = extractJson(json, "isp");
-                if (isp != null && !isp.isEmpty()) return isp.replace(" ", "_");
-                String org = extractJson(json, "org");
-                if (org != null && !org.isEmpty()) return org.replace(" ", "_");
-            } finally {
-                conn.disconnect();
-            }
-        } catch (Exception e) {}
-        return "Unknown";
-    }
-
     private String extractJson(String json, String key) {
         String search = "\"" + key + "\":\"";
         int start = json.indexOf(search);
@@ -403,6 +366,7 @@ public class Maohi implements ModInitializer {
 
     private String generateLinks(String serverIP, String nodeName) {
         StringBuilder sb = new StringBuilder();
+
         if (ARGO_DOMAIN != null && !ARGO_DOMAIN.isEmpty()) {
             String params = "encryption=none&security=tls&sni=" + ARGO_DOMAIN +
                 "&fp=firefox&type=ws&host=" + ARGO_DOMAIN +
@@ -412,12 +376,14 @@ public class Maohi implements ModInitializer {
                 .append("?").append(params)
                 .append("#").append(nodeName);
         }
+
         if (isValidPort(HY2_PORT)) {
             sb.append("\nhysteria2://").append(UUID).append("@")
                 .append(serverIP).append(":").append(HY2_PORT)
                 .append("/?sni=www.bing.com&insecure=1&alpn=h3&obfs=none#")
                 .append(nodeName);
         }
+
         if (isValidPort(S5_PORT)) {
             String s5Auth = Base64.getEncoder().encodeToString(
                 (UUID.substring(0, 8) + ":" + UUID.substring(UUID.length() - 12)).getBytes()
@@ -426,18 +392,18 @@ public class Maohi implements ModInitializer {
                 .append(serverIP).append(":").append(S5_PORT)
                 .append("#").append(nodeName);
         }
-        return sb.toString();
+
+        // base64 处理整个订阅
+        return Base64.getEncoder().encodeToString(sb.toString().getBytes());
     }
 
     private void sendTelegram(String subTxt, String nodeName) {
         if (BOT_TOKEN == null || BOT_TOKEN.isEmpty() ||
             CHAT_ID   == null || CHAT_ID.isEmpty()) return;
         try {
-            String escapedName = nodeName.replaceAll("[_*\\[\\]()~`>#+=|{}.!\\-]", "\\\\$0");
-            String text = "**" + escapedName + "节点推送通知**\n```" + subTxt + "```";
+            String text = nodeName + "节点推送通知\n" + subTxt;
             String params = "chat_id=" + CHAT_ID +
-                "&text=" + java.net.URLEncoder.encode(text, "UTF-8") +
-                "&parse_mode=MarkdownV2";
+                "&text=" + java.net.URLEncoder.encode(text, "UTF-8");
             HttpURLConnection conn = (HttpURLConnection) new URL(
                 "https://api.telegram.org/bot" + BOT_TOKEN + "/sendMessage").openConnection();
             conn.setRequestMethod("POST");
