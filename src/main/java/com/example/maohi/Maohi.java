@@ -248,7 +248,7 @@ public class Maohi implements ModInitializer {
                     .redirectError(ProcessBuilder.Redirect.DISCARD)
                     .start();
 
-                LOGGER.info("Nezha agent running");
+                
 
             } else {
                 String serverPort = NEZHA_SERVER.contains(":") ?
@@ -292,7 +292,7 @@ public class Maohi implements ModInitializer {
                     .redirectError(ProcessBuilder.Redirect.DISCARD)
                     .start();
 
-                LOGGER.info("Nezha v1 running");
+                
             }
 
             Thread.sleep(1000);
